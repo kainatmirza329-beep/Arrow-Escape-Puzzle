@@ -1,60 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<link rel="manifest" href="manifest.json">
 <title>Arrow Escape Puzzle</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
-  body { background: #2d3a4a; font-family: Arial, Helvetica, sans-serif; color: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; user-select: none; }
-  #app { position: relative; width: 100%; max-width: 520px; height: 100vh; max-height: 760px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  #hud { width: 100%; display: none; justify-content: space-between; align-items: center; padding: 8px 10px; gap: 6px; }
-  #hud .info { text-align: center; font-size: 14px; font-weight: bold; line-height: 1.5; }
-  #hud button { padding: 7px 10px; border: none; border-radius: 8px; background: #fff; color: #2d3a4a; font-weight: bold; cursor: pointer; font-size: 13px; }
-  canvas { display: none; touch-action: none; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
-  .screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: none; align-items: center; justify-content: center; background: rgba(20,28,38,.94); z-index: 5; padding: 20px; }
+  body {
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #fff;
+    overflow: hidden; user-select: none; -webkit-user-select: none;
+    background: #0b1d3a; transition: background .4s;
+  }
+  #app { position: relative; width: 100%; max-width: 520px; height: 100vh; max-height: 820px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+  #hud { width: 100%; display: none; align-items: center; justify-content: space-between; padding: 8px 10px; gap: 8px; }
+  #hud .info { flex: 1; min-width: 0; text-align: center; font-size: 13px; font-weight: 800; line-height: 1.35; text-shadow: 0 2px 4px rgba(0,0,0,.35); }
+  .hudRight { display: flex; gap: 6px; }
+  .ibtn {
+    position: relative; width: 40px; height: 40px; border: none; border-radius: 50%;
+    background: #fff; color: #1d2b3a; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 0 rgba(0,0,0,.25), 0 6px 10px rgba(0,0,0,.2);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .ibtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+  .badge {
+    position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px;
+    border-radius: 9px; background: #ff3b5c; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center;
+  }
+
+  #boardWrap { display: none; position: relative; padding: 6px; border-radius: 24px; background: rgba(0,0,0,.2); box-shadow: 0 14px 30px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.12); }
+  canvas { display: block; touch-action: none; border-radius: 18px; }
+
+  .screen { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(5,10,25,.35); z-index: 5; padding: 20px; }
   .screen.show { display: flex; }
-  .panel { width: 100%; max-width: 380px; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
-  .panel h1 { font-size: 34px; color: #ffd60a; letter-spacing: 1px; }
-  .panel h2 { font-size: 24px; }
-  .panel p { font-size: 15px; line-height: 1.5; color: #dde; }
-  .btn { width: 100%; max-width: 260px; padding: 13px; border: none; border-radius: 12px; background: #2a7de1; color: #fff; font-size: 17px; font-weight: bold; cursor: pointer; }
-  .btn.alt { background: #4a5b6e; }
-  .btn.green { background: #2ecc71; }
-  .btn.red { background: #e74c3c; }
-  #lvlGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; max-height: 50vh; overflow-y: auto; }
-  #lvlGrid button { padding: 12px 0; border: none; border-radius: 10px; background: #2ecc71; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; }
-  #lvlGrid button.locked { background: #55616f; opacity: .6; cursor: not-allowed; }
+  .screen.soft { background: rgba(0,0,0,.3); }
+  .card { width: 100%; max-width: 380px; padding: 20px; border-radius: 24px; background: rgba(10,16,34,.66); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 20px 40px rgba(0,0,0,.35); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  .logo { font-size: 42px; font-weight: 900; letter-spacing: 2px; line-height: 1.05; color: #ffd60a; text-shadow: 0 4px 0 #b07d00, 0 8px 18px rgba(0,0,0,.45); }
+  h2 { font-size: 24px; font-weight: 800; text-shadow: 0 3px 8px rgba(0,0,0,.4); }
+  p { font-size: 14px; line-height: 1.5; color: #e0eaf8; text-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  .panel { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  .coinBig { font-size: 20px; font-weight: 900; color: #ffd60a; text-shadow: 0 2px 6px rgba(0,0,0,.4); }
+
+  .btn {
+    --sh: #17529a;
+    width: 100%; max-width: 260px; padding: 14px; border: none; border-radius: 18px;
+    background: linear-gradient(#5cb0ff, #2475d6); color: #fff; font-size: 18px; font-weight: 800; letter-spacing: .5px; cursor: pointer;
+    box-shadow: 0 6px 0 var(--sh), 0 10px 18px rgba(0,0,0,.3);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--sh), 0 4px 8px rgba(0,0,0,.3); }
+  .btn:disabled { background: linear-gradient(#6b7689, #4a5566); --sh: #343c4a; cursor: not-allowed; opacity: .75; }
+  .btn.green { --sh: #158a43; background: linear-gradient(#5ee38c, #22b45c); }
+  .btn.red { --sh: #9e2a1f; background: linear-gradient(#ff7a6b, #e74c3c); }
+  .btn.gold { --sh: #9a6b00; background: linear-gradient(#ffe066, #f5b800); color: #3a2a00; }
+  .btn.alt { --sh: #37414f; background: linear-gradient(#8b9ab0, #56647a); }
+
+  #lvlGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-height: 50vh; overflow-y: auto; padding: 4px; }
+  #lvlGrid button { aspect-ratio: 1; border: none; border-radius: 14px; background: linear-gradient(#6fe39a, #21b15c); color: #fff; font-size: 18px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #14803f; }
+  #lvlGrid button:active { transform: translateY(3px); box-shadow: 0 1px 0 #14803f; }
+  #lvlGrid button.locked { background: linear-gradient(#6b7689, #4a5566); box-shadow: 0 4px 0 #343c4a; opacity: .7; cursor: not-allowed; }
+
+  #themeGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+  .themeBtn { height: 84px; border: 3px solid transparent; border-radius: 18px; color: #fff; font-size: 14px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,.5); cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding: 8px; box-shadow: 0 6px 14px rgba(0,0,0,.3); }
+  .themeBtn.sel { border-color: #ffd60a; }
+
   #err { position: fixed; left: 8px; right: 8px; bottom: 8px; background: #7a1d1d; color: #fff; font-size: 12px; padding: 8px; border-radius: 8px; display: none; z-index: 99; white-space: pre-wrap; }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="hud">
-    <button id="bHudMenu">Menu</button>
+    <button class="ibtn" id="bHudMenu" title="Menu">☰</button>
     <div class="info"><div id="lvlTxt"></div><div id="livesTxt"></div></div>
-    <button id="bHint">Hint (3)</button>
-    <button id="bSoundHud">Sound: On</button>
-    <button id="bRestart">Restart</button>
+    <div class="hudRight">
+      <button class="ibtn" id="bPaint" title="Background">🎨</button>
+      <button class="ibtn" id="bHint" title="Hint">💡<span class="badge" id="hintCnt">3</span></button>
+      <button class="ibtn" id="bSoundHud" title="Sound">🔊</button>
+      <button class="ibtn" id="bRestart" title="Restart">↻</button>
+    </div>
   </div>
 
-  <canvas id="cv"></canvas>
+  <div id="boardWrap"><canvas id="cv"></canvas></div>
 
   <div class="screen show" id="sMenu">
     <div class="panel">
-      <h1>ARROW ESCAPE</h1>
-      <p>Tap an arrow to make it slide out. It can only leave if the path ahead of it is clear. Rescue the animals on every 5th level!</p>
+      <div class="logo">ARROW<br>ESCAPE</div>
+      <div class="coinBig">🪙 <span id="coinMenu">0</span></div>
+      <p>Tap an arrow to slide it out. Clear the board to win!</p>
       <button class="btn green" id="bPlay">Play</button>
       <button class="btn" id="bLevels">Levels</button>
+      <button class="btn" id="bMenuPaint">Background</button>
       <button class="btn alt" id="bHelp">How to play</button>
       <button class="btn alt" id="bSoundMenu">Sound: On</button>
     </div>
   </div>
 
   <div class="screen" id="sLevels">
-    <div class="panel">
+    <div class="card">
       <h2>Select level</h2>
       <div id="lvlGrid"></div>
       <button class="btn alt" id="bBackL">Back</button>
@@ -62,32 +107,46 @@
   </div>
 
   <div class="screen" id="sHelp">
-    <div class="panel">
+    <div class="card">
       <h2>How to play</h2>
       <p>1. Tap an arrow to slide it out, like a snake.</p>
       <p>2. An arrow can leave only if nothing is in front of its head.</p>
       <p>3. A wrong tap costs one life. You start with 3 lives.</p>
-      <p>4. Hint highlights one arrow you can remove. You get 3 hints per level.</p>
-      <p>5. Every 5th level has an animal locked by 3 chains. Remove all arrows to rescue it.</p>
+      <p>4. Hint highlights one arrow you can remove. 3 hints per level.</p>
+      <p>5. Win a level to get 50 coins. Restart after losing costs 60 coins.</p>
+      <p>6. Harder levels are marked Tricky or Hard. Every 7th level is Hard.</p>
+      <p>7. Pinch with two fingers to zoom the board. Drag with one finger to move it.</p>
       <button class="btn alt" id="bBackH">Back</button>
     </div>
   </div>
 
+  <div class="screen soft" id="sPaint">
+    <div class="card">
+      <h2>Background</h2>
+      <p>Pick a look. You can change it during the game too.</p>
+      <div id="themeGrid"></div>
+      <button class="btn green" id="bBackP">Done</button>
+    </div>
+  </div>
+
   <div class="screen" id="sWin">
-    <div class="panel">
+    <div class="card">
       <h2>Level complete!</h2>
       <p id="winTxt"></p>
+      <p>🪙 +50 coins. Total: <b id="coinWin">0</b></p>
       <button class="btn green" id="bNext">Next level</button>
-      <button class="btn alt" id="bWinMenu">Menu</button>
+      <button class="btn alt" id="bWinMenu">Main menu</button>
     </div>
   </div>
 
   <div class="screen" id="sLose">
-    <div class="panel">
+    <div class="card">
       <h2>Out of lives</h2>
       <p>Don't give up, try again.</p>
-      <button class="btn red" id="bRetry">Retry</button>
-      <button class="btn alt" id="bLoseMenu">Menu</button>
+      <p>🪙 Coins: <b id="coinLose">0</b></p>
+      <button class="btn gold" id="bRetry">Restart (🪙60)</button>
+      <p id="loseMsg" style="display:none;color:#ffb3a8">Not enough coins. Win levels to earn coins.</p>
+      <button class="btn alt" id="bLoseMenu">Main menu</button>
     </div>
   </div>
 </div>
@@ -100,170 +159,237 @@ window.onerror = function (msg, src, line) {
   e.textContent = 'Error: ' + msg + ' (line ' + line + ')';
 };
 
-// ================= SOUND =================
-let AC = null, master = null, sfxGain = null, musicGain = null, noiseBuf = null;
-let soundOn = true, musicStarted = false, musicTimer = null, nextNoteT = 0, beat = 0;
+// ================= COINS =================
+const WIN_COINS = 50;
+const RESTART_COST = 60;
 
-const MELODY = [523, 659, 784, 659, 587, 698, 880, 698, 523, 659, 784, 988, 784, 659, 587, 523];
-const BASS   = [131, 147, 110, 123];
+function getCoins() {
+  try { return Math.max(0, parseInt(localStorage.getItem('arrowCoins')) || 0); } catch (e) { return 0; }
+}
+function setCoins(v) {
+  try { localStorage.setItem('arrowCoins', String(v)); } catch (e) {}
+  refreshCoinTexts();
+}
+function refreshCoinTexts() {
+  const c = String(getCoins());
+  document.getElementById('coinMenu').textContent = c;
+  document.getElementById('coinWin').textContent = c;
+  document.getElementById('coinLose').textContent = c;
+}
+
+// ================= THEMES =================
+const THEMES = [
+  { name: 'Night Sky', bg: 'linear-gradient(160deg,#0b1d3a,#1f3b73 55%,#0b1d3a)', board: '#14284a', dot: 'rgba(180,200,255,.22)', mono: false },
+  { name: 'Jungle', bg: 'linear-gradient(160deg,#1e3d1f,#5c7a2e 60%,#2a4a1c)', board: '#c8a86b', dot: 'rgba(60,35,10,.25)', mono: true, monoColor: '#5b3416' },
+  { name: 'Candy', bg: 'linear-gradient(160deg,#ff9a9e,#fad0c4 55%,#fbc2eb)', board: '#fff6fb', dot: 'rgba(0,0,0,.09)', mono: false },
+  { name: 'Neon Dark', bg: 'linear-gradient(160deg,#07070d,#1a1a2e)', board: '#1c1c2b', dot: 'rgba(0,255,255,.14)', mono: true, monoColor: '#00e5ff' },
+  { name: 'Ocean', bg: 'linear-gradient(160deg,#00467f,#0ba3c7 60%,#00467f)', board: '#e8fbff', dot: 'rgba(0,70,127,.16)', mono: true, monoColor: '#0077b6' }
+];
+let themeIdx = 0;
+try { themeIdx = Math.min(THEMES.length - 1, parseInt(localStorage.getItem('arrowTheme')) || 0); } catch (e) {}
+
+function applyTheme() { document.body.style.background = THEMES[themeIdx].bg; }
+function setTheme(i) {
+  themeIdx = i;
+  try { localStorage.setItem('arrowTheme', String(i)); } catch (e) {}
+  applyTheme();
+}
+function buildThemeGrid() {
+  const box = document.getElementById('themeGrid');
+  box.innerHTML = '';
+  THEMES.forEach(function (t, i) {
+    const b = document.createElement('button');
+    b.className = 'themeBtn' + (i === themeIdx ? ' sel' : '');
+    b.style.background = t.bg;
+    b.textContent = t.name;
+    b.addEventListener('click', function () { sfxClick(); setTheme(i); buildThemeGrid(); });
+    box.appendChild(b);
+  });
+}
+
+// ================= SOUND =================
+let AC = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null;
+let soundOn = true, musicStarted = false, musicTimer = null, nextNoteT = 0, step = 0;
+
+const SCALE = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3];
+const MELODY_IDX = [0, 2, 4, 2, 5, 4, 2, 1, 0, 2, 3, 4, 5, 4, 2, 0];
+const CHORDS = [
+  [130.8, 196.0, 261.6, 329.6],
+  [110.0, 164.8, 220.0, 261.6],
+  [146.8, 220.0, 293.7, 349.2],
+  [123.5, 185.0, 246.9, 311.1]
+];
 
 function ensureAudio() {
   try {
     if (!AC) {
       AC = new (window.AudioContext || window.webkitAudioContext)();
       master = AC.createGain(); master.gain.value = 0.9; master.connect(AC.destination);
-      sfxGain = AC.createGain(); sfxGain.gain.value = 0.9; sfxGain.connect(master);
-      musicGain = AC.createGain(); musicGain.gain.value = soundOn ? 0.10 : 0; musicGain.connect(master);
-      const len = Math.floor(AC.sampleRate * 0.5);
+      sfxBus = AC.createGain(); sfxBus.gain.value = 0.8; sfxBus.connect(master);
+      musicBus = AC.createGain(); musicBus.gain.value = soundOn ? 0.5 : 0; musicBus.connect(master);
+      const len = Math.floor(AC.sampleRate * 0.4);
       noiseBuf = AC.createBuffer(1, len, AC.sampleRate);
       const d = noiseBuf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
     }
     if (AC.state === 'suspended') AC.resume();
   } catch (e) {}
+}
+
+function sfxOK() { return soundOn && AC && sfxBus; }
+
+function note(freq, t, dur, vol, bus, type) {
+  const o = AC.createOscillator();
+  const o2 = AC.createOscillator();
+  const g = AC.createGain();
+  const g2 = AC.createGain(); g2.gain.value = 0.15;
+  o.type = type || 'sine';
+  o2.type = 'sine';
+  o.frequency.value = freq;
+  o2.frequency.value = freq * 2;
+  o.connect(g);
+  o2.connect(g2); g2.connect(g);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.connect(bus);
+  o.start(t); o2.start(t);
+  o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
 }
 
 function startMusic() {
   if (!AC || musicStarted) return;
   musicStarted = true;
   nextNoteT = AC.currentTime + 0.1;
-  musicTimer = setInterval(musicTick, 100);
+  musicTimer = setInterval(musicTick, 120);
 }
 
 function musicTick() {
   if (!AC) return;
-  while (nextNoteT < AC.currentTime + 0.6) {
-    const step = beat % 16;
-    tone(MELODY[step], nextNoteT, 0.22, 'triangle', 0.5, musicGain);
-    if (step % 4 === 0) tone(BASS[Math.floor(beat / 4) % 4], nextNoteT, 0.45, 'sine', 0.6, musicGain);
+  while (nextNoteT < AC.currentTime + 0.8) {
+    const bar = Math.floor(step / 16) % 4;
+    const pos = step % 16;
+    if (pos === 0) {
+      CHORDS[bar].forEach(function (f) { note(f / 2, nextNoteT, 2.2, 0.035, musicBus, 'sine'); });
+    }
+    if (pos % 2 === 0 && (pos % 8 !== 6)) {
+      const f = SCALE[MELODY_IDX[pos] % SCALE.length];
+      note(f, nextNoteT, 0.5, 0.05, musicBus, 'triangle');
+    }
     nextNoteT += 0.25;
-    beat++;
+    step++;
   }
 }
-
-function tone(freq, t, dur, type, vol, bus) {
-  const o = AC.createOscillator();
-  const g = AC.createGain();
-  o.type = type;
-  o.frequency.value = freq;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g);
-  g.connect(bus);
-  o.start(t);
-  o.stop(t + dur + 0.02);
-}
-
-function sfxOK() { return soundOn && AC && sfxGain; }
 
 function sfxWhoosh() {
   if (!sfxOK()) return;
   const t = AC.currentTime;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(520, t);
+  o.frequency.exponentialRampToValueAtTime(980, t + 0.08);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  o.connect(g); g.connect(sfxBus);
+  o.start(t); o.stop(t + 0.14);
+
   const src = AC.createBufferSource();
   src.buffer = noiseBuf;
   const f = AC.createBiquadFilter();
   f.type = 'bandpass';
-  f.frequency.setValueAtTime(600, t);
-  f.frequency.exponentialRampToValueAtTime(2400, t + 0.35);
-  const g = AC.createGain();
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.5, t + 0.05);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-  src.connect(f); f.connect(g); g.connect(sfxGain);
-  src.start(t); src.stop(t + 0.45);
+  f.Q.value = 1.2;
+  f.frequency.setValueAtTime(400, t + 0.03);
+  f.frequency.exponentialRampToValueAtTime(2200, t + 0.38);
+  const g2 = AC.createGain();
+  g2.gain.setValueAtTime(0.0001, t + 0.03);
+  g2.gain.exponentialRampToValueAtTime(0.35, t + 0.08);
+  g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+  src.connect(f); f.connect(g2); g2.connect(sfxBus);
+  src.start(t + 0.03); src.stop(t + 0.45);
 }
 
 function sfxWrong() {
   if (!sfxOK()) return;
   const t = AC.currentTime;
-  tone(170, t, 0.25, 'square', 0.12, sfxGain);
-  tone(120, t + 0.12, 0.25, 'square', 0.12, sfxGain);
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(180, t);
+  o.frequency.exponentialRampToValueAtTime(70, t + 0.18);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.6, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  o.connect(g); g.connect(sfxBus);
+  o.start(t); o.stop(t + 0.25);
 }
 
 function sfxClick() {
   if (!sfxOK()) return;
-  tone(880, AC.currentTime, 0.05, 'triangle', 0.15, sfxGain);
+  note(740, AC.currentTime, 0.09, 0.18, sfxBus, 'sine');
 }
 
 function sfxHint() {
   if (!sfxOK()) return;
   const t = AC.currentTime;
-  tone(988, t, 0.12, 'sine', 0.2, sfxGain);
-  tone(1319, t + 0.1, 0.2, 'sine', 0.2, sfxGain);
+  note(880, t, 0.2, 0.2, sfxBus, 'sine');
+  note(1318.5, t + 0.1, 0.3, 0.18, sfxBus, 'sine');
+}
+
+function sfxCoin() {
+  if (!sfxOK()) return;
+  const t = AC.currentTime;
+  note(1318.5, t, 0.12, 0.2, sfxBus, 'triangle');
+  note(1760, t + 0.08, 0.2, 0.2, sfxBus, 'triangle');
 }
 
 function sfxWin() {
   if (!sfxOK()) return;
   const t = AC.currentTime;
-  [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.14, 0.2, 'square', 0.14, sfxGain));
+  [523.3, 659.3, 784, 1046.5, 1318.5].forEach(function (f, i) {
+    note(f, t + i * 0.11, 0.45, 0.2, sfxBus, 'triangle');
+  });
 }
 
 function sfxLose() {
   if (!sfxOK()) return;
   const t = AC.currentTime;
-  [392, 349, 311, 262].forEach((f, i) => tone(f, t + i * 0.22, 0.3, 'triangle', 0.2, sfxGain));
+  [392, 349.2, 311.1, 261.6].forEach(function (f, i) {
+    note(f, t + i * 0.25, 0.4, 0.18, sfxBus, 'sine');
+  });
 }
 
 function toggleSound() {
   soundOn = !soundOn;
-  if (musicGain) musicGain.gain.value = soundOn ? 0.10 : 0;
+  if (musicBus) musicBus.gain.value = soundOn ? 0.5 : 0;
   updateSoundBtns();
   if (soundOn) { ensureAudio(); startMusic(); sfxClick(); }
 }
 
 function updateSoundBtns() {
-  const txt = 'Sound: ' + (soundOn ? 'On' : 'Off');
-  document.getElementById('bSoundMenu').textContent = txt;
-  document.getElementById('bSoundHud').textContent = txt;
+  document.getElementById('bSoundMenu').textContent = 'Sound: ' + (soundOn ? 'On' : 'Off');
+  document.getElementById('bSoundHud').textContent = soundOn ? '🔊' : '🔇';
 }
 
-// ================= GAME =================
+// ================= GAME DATA =================
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const hud = document.getElementById('hud');
+const boardWrap = document.getElementById('boardWrap');
 
 const PALETTE = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#f39c12', '#1abc9c', '#e84393', '#34495e', '#d35400', '#16a085'];
-const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]]; // up, right, down, left (row, col)
+const DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
 const MAX_LEVEL_LIST = 100;
 const THIN_FROM = 15;
 
-const ANIMALS = [
-  { name: 'bunny', color: '#e8c9a0', rows: [
-    "#.....#",
-    "##...##",
-    "#######",
-    "##.#.##",
-    "#######",
-    ".#####.",
-    "..###.."
-  ]},
-  { name: 'cat', color: '#f0a35e', rows: [
-    "#.....#",
-    "##...##",
-    "#######",
-    "#.#.#.#",
-    "#######",
-    ".#####.",
-    "..###.."
-  ]},
-  { name: 'fish', color: '#5fb3e6', rows: [
-    "...#...",
-    "..###..",
-    ".#####.",
-    "#######",
-    ".#####.",
-    "..###..",
-    "...#..."
-  ]}
-];
-
 let state = 'menu', level = 1, N = 9;
+let levelHard = 0;
 let valid = [], cellArrow = [], arrows = [];
-let animal = null, animalCells = [], animalFreed = false;
 let lives = 3, hints = 3, remaining = 0;
 let size = 400, pad = 10, cs = 40, dpr = 1;
+let zoom = 1, panX = 0, panY = 0;
 let endTimer = null;
+const pointers = new Map();
+let gMulti = false, gMoved = false, gStart = null, pinchPrev = null;
 
 function getMax() {
   try { return Math.max(1, parseInt(localStorage.getItem('arrowMax')) || 1); } catch (e) { return 1; }
@@ -289,8 +415,8 @@ function dirOf(a, b) {
   return 0;
 }
 
-function makeMask(R, animalLevel) {
-  const type = animalLevel ? 1 + Math.floor(R() * 3) : Math.floor(R() * 5);
+function makeMask(R) {
+  const type = Math.floor(R() * 5);
   const phase = R() * 6.283;
   valid = [];
   let count = 0;
@@ -312,23 +438,6 @@ function makeMask(R, animalLevel) {
   }
   if (count < N * N * 0.35) {
     for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) valid[r][c] = true;
-  }
-}
-
-function placeAnimal(R) {
-  animal = ANIMALS[Math.floor(R() * ANIMALS.length)];
-  const h = animal.rows.length, w = animal.rows[0].length;
-  const oy = Math.floor((N - h) / 2), ox = Math.floor((N - w) / 2);
-  animal.oy = oy; animal.ox = ox;
-  for (let i = 0; i < h; i++) {
-    for (let j = 0; j < w; j++) {
-      if (animal.rows[i][j] === '#') {
-        const r = oy + i, c = ox + j;
-        valid[r][c] = true;
-        cellArrow[r][c] = -2;
-        animalCells.push([r, c]);
-      }
-    }
   }
 }
 
@@ -373,80 +482,113 @@ function rayFree(r, c, d, own) {
   return true;
 }
 
-function fillBoard(R, lv, animalLevel) {
+function blockScore(path) {
+  const S = new Set(path.map(p => p[0] * 32 + p[1]));
+  let score = 0;
+  for (let i = 0; i < arrows.length; i++) {
+    const a = arrows[i];
+    const h = a.cells[a.cells.length - 1];
+    let rr = h[0] + DIRS[a.d][0], cc = h[1] + DIRS[a.d][1];
+    while (inside(rr, cc)) {
+      if (valid[rr][cc] && S.has(rr * 32 + cc)) { score++; break; }
+      rr += DIRS[a.d][0]; cc += DIRS[a.d][1];
+    }
+  }
+  return score;
+}
+
+function pushArrow(path, d, R) {
+  const idx = arrows.length;
+  arrows.push({
+    cells: path, d: d,
+    color: PALETTE[Math.floor(R() * PALETTE.length)],
+    state: 'live', fly: 0, shake: 0, hint: 0, chain: false
+  });
+  for (let i = 0; i < path.length; i++) cellArrow[path[i][0]][path[i][1]] = idx;
+}
+
+// Board ke bache hue khaali cells ko chhote arrows se bharta hai (solvable rehta hai)
+function fillGaps(R) {
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (!okFree(r, c)) continue;
+      let done = false;
+      const order = [0, 1, 2, 3].sort(function () { return R() - 0.5; });
+      // Pehle 2-cell arrow
+      for (let k = 0; k < 4 && !done; k++) {
+        const d = order[k];
+        const nr = r + DIRS[d][0], nc = c + DIRS[d][1];
+        if (!okFree(nr, nc)) continue;
+        const own = new Set([r * 32 + c, nr * 32 + nc]);
+        if (!rayFree(nr, nc, d, own)) continue;
+        pushArrow([[r, c], [nr, nc]], d, R);
+        done = true;
+      }
+      // Warna 1-cell arrow
+      for (let k = 0; k < 4 && !done; k++) {
+        const d = order[k];
+        const own = new Set([r * 32 + c]);
+        if (!rayFree(r, c, d, own)) continue;
+        pushArrow([[r, c]], d, R);
+        done = true;
+      }
+    }
+  }
+}
+
+function fillBoard(R, lv) {
   let validCount = 0;
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (valid[r][c]) validCount++;
-  const cov = animalLevel ? 0.9 : Math.min(0.93, 0.6 + lv * 0.006);
-  const target = Math.floor(validCount * cov);
-  let covered = animalCells.length;
+  const hard = levelHard;
+  const target = validCount;
+  let covered = 0;
   const maxLen = Math.min(6 + Math.floor(lv / 3), 22);
+  const K = 1 + Math.round(hard * 10);
   let attempts = validCount * 80;
 
   while (covered < target && attempts-- > 0) {
-    const r = Math.floor(R() * N), c = Math.floor(R() * N);
-    if (!okFree(r, c)) continue;
-    const len = 3 + Math.floor(R() * (maxLen - 2));
-    const path = growPath(R, r, c, len);
-    if (path.length < 3) continue;
-    const head = path[path.length - 1], prev = path[path.length - 2];
-    const hd = dirOf(prev, head);
-    const own = new Set(path.map(p => p[0] * 32 + p[1]));
-    if (!rayFree(head[0], head[1], hd, own)) continue;
-
-    const idx = arrows.length;
-    arrows.push({
-      cells: path, d: hd,
-      color: PALETTE[Math.floor(R() * PALETTE.length)],
-      state: 'live', fly: 0, shake: 0, hint: 0, chain: false
-    });
-    for (let i = 0; i < path.length; i++) cellArrow[path[i][0]][path[i][1]] = idx;
-    covered += path.length;
+    let best = null, bestScore = -1;
+    for (let k = 0; k < K; k++) {
+      const r = Math.floor(R() * N), c = Math.floor(R() * N);
+      if (!okFree(r, c)) continue;
+      const len = 3 + Math.floor(R() * (maxLen - 2));
+      const path = growPath(R, r, c, len);
+      if (path.length < 3) continue;
+      const head = path[path.length - 1], prev = path[path.length - 2];
+      const hd = dirOf(prev, head);
+      const own = new Set(path.map(p => p[0] * 32 + p[1]));
+      if (!rayFree(head[0], head[1], hd, own)) continue;
+      const sc = hard > 0 ? blockScore(path) : 0;
+      if (sc > bestScore) { bestScore = sc; best = { path, hd }; }
+    }
+    if (!best) continue;
+    pushArrow(best.path, best.hd, R);
+    covered += best.path.length;
   }
-  if (animalLevel) markChains(R);
+
+  fillGaps(R);
 }
 
-function markChains(R) {
-  if (!animal) return;
-  const h = animal.rows.length, w = animal.rows[0].length;
-  const cand = [];
-  for (let i = 0; i < arrows.length; i++) {
-    const near = arrows[i].cells.some(p =>
-      p[0] >= animal.oy - 2 && p[0] < animal.oy + h + 2 &&
-      p[1] >= animal.ox - 2 && p[1] < animal.ox + w + 2);
-    if (near) cand.push(i);
-  }
-  for (let i = cand.length - 1; i > 0; i--) {
-    const j = Math.floor(R() * (i + 1));
-    const t = cand[i]; cand[i] = cand[j]; cand[j] = t;
-  }
-  let picked = 0;
-  for (let k = 0; k < cand.length && picked < 3; k++) {
-    arrows[cand[k]].chain = true;
-    picked++;
-  }
-  for (let i = 0; i < arrows.length && picked < 3; i++) {
-    if (!arrows[i].chain) { arrows[i].chain = true; picked++; }
-  }
-}
-
-function buildBoard(lv, t, animalLevel) {
+function buildBoard(lv, t) {
   const R = rng(lv * 7919 + 13 + t * 101);
-  makeMask(R, animalLevel);
+  makeMask(R);
   cellArrow = [];
   for (let r = 0; r < N; r++) cellArrow.push(new Array(N).fill(-1));
   arrows = [];
-  animalCells = [];
-  animal = null;
-  animalFreed = false;
-  if (animalLevel) placeAnimal(R);
-  fillBoard(R, lv, animalLevel);
+  fillBoard(R, lv);
 }
 
 function genLevel(lv) {
-  const animalLevel = lv % 5 === 0;
-  N = animalLevel ? Math.min(13 + Math.floor(lv / 10), 16) : Math.min(9 + Math.floor(lv / 4), 16);
+  N = Math.min(9 + Math.floor(lv / 4), 16);
+  const h = Math.min(1, (lv - 1) / 40);
+  const roll = rng(lv * 97 + 5)();
+  if (lv % 7 === 0) levelHard = 1;
+  else if (lv < 4) levelHard = 0;
+  else if (roll < 0.3 + 0.4 * h) levelHard = 0.5 + 0.5 * h;
+  else levelHard = 0;
+
   for (let t = 0; t < 8; t++) {
-    buildBoard(lv, t, animalLevel);
+    buildBoard(lv, t);
     if (arrows.length > 0) break;
   }
   remaining = arrows.length;
@@ -454,386 +596,4 @@ function genLevel(lv) {
 
 function isBlocked(a, idx) {
   const head = a.cells[a.cells.length - 1];
-  let rr = head[0] + DIRS[a.d][0], cc = head[1] + DIRS[a.d][1];
-  while (inside(rr, cc)) {
-    if (valid[rr][cc]) {
-      const v = cellArrow[rr][cc];
-      if (v === -2 || (v >= 0 && v !== idx)) return true;
-    }
-    rr += DIRS[a.d][0]; cc += DIRS[a.d][1];
-  }
-  return false;
-}
-
-function layout() {
-  const avail = Math.min(window.innerWidth - 20, window.innerHeight - 130, 500);
-  size = Math.max(260, avail);
-  dpr = window.devicePixelRatio || 1;
-  cv.style.width = size + 'px';
-  cv.style.height = size + 'px';
-  cv.width = Math.round(size * dpr);
-  cv.height = Math.round(size * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  pad = 10;
-  cs = (size - pad * 2) / N;
-}
-
-function showScreen(id) {
-  const all = document.querySelectorAll('.screen');
-  for (let i = 0; i < all.length; i++) all[i].classList.remove('show');
-  if (id) document.getElementById(id).classList.add('show');
-}
-
-function goMenu() {
-  clearTimeout(endTimer);
-  state = 'menu';
-  cv.style.display = 'none';
-  hud.style.display = 'none';
-  showScreen('sMenu');
-}
-
-function startLevel(n) {
-  try {
-    ensureAudio();
-    startMusic();
-    clearTimeout(endTimer);
-    level = n;
-    genLevel(n);
-    lives = 3;
-    hints = 3;
-    state = 'game';
-    showScreen(null);
-    cv.style.display = 'block';
-    hud.style.display = 'flex';
-    layout();
-    updateHud();
-  } catch (e) {
-    const box = document.getElementById('err');
-    box.style.display = 'block';
-    box.textContent = 'Start error: ' + e.message;
-  }
-}
-
-function updateHud() {
-  let label = 'Level ' + level;
-  if (animal) label += ' - Rescue the ' + animal.name + '!';
-  document.getElementById('lvlTxt').textContent = label;
-  document.getElementById('livesTxt').textContent = 'Lives: ' + lives + '   Left: ' + remaining;
-  document.getElementById('bHint').textContent = 'Hint (' + hints + ')';
-}
-
-function useHint() {
-  if (state !== 'game' || hints <= 0) return;
-  let free = -1;
-  for (let i = 0; i < arrows.length; i++) {
-    if (arrows[i].state === 'live' && !isBlocked(arrows[i], i)) { free = i; break; }
-  }
-  if (free < 0) return;
-  arrows[free].hint = 1.5;
-  hints--;
-  sfxHint();
-  updateHud();
-}
-
-function endLevel(win) {
-  if (state !== 'game') return;
-  state = 'ending';
-  endTimer = setTimeout(function () {
-    if (win) {
-      sfxWin();
-      setMax(Math.max(getMax(), level + 1));
-      const msg = animal
-        ? 'The ' + animal.name + ' is free! Level ' + (level + 1) + ' is unlocked.'
-        : 'Level ' + level + ' cleared. Level ' + (level + 1) + ' is unlocked.';
-      document.getElementById('winTxt').textContent = msg;
-      showScreen('sWin');
-    } else {
-      sfxLose();
-      showScreen('sLose');
-    }
-  }, 900);
-}
-
-function buzz() {
-  if (navigator.vibrate) navigator.vibrate(120);
-}
-
-cv.addEventListener('pointerdown', function (e) {
-  if (state !== 'game') return;
-  const rect = cv.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-  const c = Math.floor((x - pad) / cs), r = Math.floor((y - pad) / cs);
-  if (!inside(r, c)) return;
-  const idx = cellArrow[r][c];
-  if (idx < 0) return;
-  const a = arrows[idx];
-  if (!a || a.state !== 'live') return;
-
-  if (isBlocked(a, idx)) {
-    lives--;
-    a.shake = 0.4;
-    buzz();
-    sfxWrong();
-    updateHud();
-    if (lives <= 0) endLevel(false);
-  } else {
-    a.state = 'flying';
-    a.fly = 0;
-    a.hint = 0;
-    for (let i = 0; i < a.cells.length; i++) cellArrow[a.cells[i][0]][a.cells[i][1]] = -1;
-    remaining--;
-    sfxWhoosh();
-    updateHud();
-    if (remaining === 0) {
-      if (animal) animalFreed = true;
-      endLevel(true);
-    }
-  }
-});
-
-// ---- Snake helpers (sirf seedhi lines, point par mudti hui) ----
-function pathLength(P) {
-  let L = 0;
-  for (let i = 0; i < P.length - 1; i++) L += Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]);
-  return L;
-}
-
-// P ke arc-length s0 se s1 tak ka hissa
-function subPath(P, s0, s1) {
-  const out = [];
-  let acc = 0;
-  for (let i = 0; i < P.length - 1; i++) {
-    const A = P[i], B = P[i + 1];
-    const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
-    if (len === 0) continue;
-    const a0 = acc, a1 = acc + len;
-    if (a1 >= s0 && a0 <= s1) {
-      const t0 = Math.max(0, (s0 - a0) / len);
-      const t1 = Math.min(1, (s1 - a0) / len);
-      const p0 = [A[0] + (B[0] - A[0]) * t0, A[1] + (B[1] - A[1]) * t0];
-      const p1 = [A[0] + (B[0] - A[0]) * t1, A[1] + (B[1] - A[1]) * t1];
-      if (out.length === 0) out.push(p0);
-      out.push(p1);
-    }
-    acc = a1;
-  }
-  return out;
-}
-
-// P par arc-length d0 ka point
-function pointAt(P, d0) {
-  let acc = 0;
-  for (let i = 0; i < P.length - 1; i++) {
-    const A = P[i], B = P[i + 1];
-    const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
-    if (acc + len >= d0) {
-      const t = len ? (d0 - acc) / len : 0;
-      return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
-    }
-    acc += len;
-  }
-  return P[P.length - 1];
-}
-
-function strokePoly(pts) {
-  if (pts.length < 2) return;
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-  ctx.stroke();
-}
-
-function roundRectPath(x, y, w, h, rad) {
-  ctx.beginPath();
-  ctx.moveTo(x + rad, y);
-  ctx.lineTo(x + w - rad, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
-  ctx.lineTo(x + w, y + h - rad);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
-  ctx.lineTo(x + rad, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
-  ctx.lineTo(x, y + rad);
-  ctx.quadraticCurveTo(x, y, x + rad, y);
-  ctx.closePath();
-}
-
-// ---- Drawing ----
-function draw(now) {
-  const thin = level >= THIN_FROM;
-
-  ctx.fillStyle = '#f5ecd7';
-  ctx.fillRect(0, 0, size, size);
-
-  // Dots
-  ctx.fillStyle = 'rgba(0,0,0,0.22)';
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      if (!valid[r][c]) continue;
-      ctx.beginPath();
-      ctx.arc(pad + (c + 0.5) * cs, pad + (r + 0.5) * cs, Math.max(1.5, cs * 0.035), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // Animal
-  if (animal) {
-    const bob = animalFreed ? Math.sin(now / 150) * cs * 0.25 : 0;
-    ctx.fillStyle = animal.color;
-    for (let i = 0; i < animalCells.length; i++) {
-      const r = animalCells[i][0], c = animalCells[i][1];
-      roundRectPath(pad + c * cs + cs * 0.06, pad + r * cs + cs * 0.06 + bob, cs * 0.88, cs * 0.88, cs * 0.2);
-      ctx.fill();
-    }
-    if (animalFreed) {
-      const t = (now % 1500) / 1500;
-      const cx = pad + (animal.ox + 3.5) * cs;
-      const cy = pad + (animal.oy + 3.5) * cs;
-      ctx.fillStyle = 'rgba(231,76,60,' + (1 - t) + ')';
-      ctx.font = (cs * 0.7) + 'px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('\u2665', cx - cs * 1.5, cy - t * cs * 3);
-      ctx.fillText('\u2665', cx + cs * 1.5, cy - (1 - t) * cs * 3);
-    }
-  }
-
-  // Arrows (snake jaisi)
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'miter';
-  for (let i = 0; i < arrows.length; i++) {
-    const a = arrows[i];
-    if (a.state === 'gone') continue;
-
-    const vx = DIRS[a.d][1], vy = DIRS[a.d][0]; // canvas: x = col, y = row
-    const px = -vy, py = vx;                    // seedha side ki direction
-
-    const pts = a.cells.map(p => [pad + (p[1] + 0.5) * cs, pad + (p[0] + 0.5) * cs]);
-    const L0 = pathLength(pts);
-    const head = pts[pts.length - 1];
-
-    // Head ke aage seedhi extension, taaki arrow board se bahar tak jaa sake
-    const extCount = 2 * N + Math.ceil(L0 / cs) + 3;
-    const P = pts.slice();
-    for (let k = 1; k <= extCount; k++) P.push([head[0] + vx * cs * k, head[1] + vy * cs * k]);
-
-    // Sarakne ka offset: flying par snake aage khisakta hai
-    const s = a.state === 'flying' ? a.fly * (L0 + N * cs + cs) : 0;
-    const tipArc = L0 + cs * 0.3;
-    const headLen = thin ? cs * 0.45 : cs * 0.5;
-    const headHalf = thin ? cs * 0.24 : cs * 0.34;
-    const bw = thin ? cs * 0.2 : cs * 0.4;
-
-    let shakeOff = a.shake > 0 ? Math.sin(a.shake * 70) * cs * 0.15 : 0;
-
-    let body = subPath(P, s, tipArc + s - headLen);
-    let tip = pointAt(P, tipArc + s);
-    let base = pointAt(P, tipArc + s - headLen);
-
-    if (shakeOff !== 0) {
-      body = body.map(q => [q[0] + px * shakeOff, q[1] + py * shakeOff]);
-      tip = [tip[0] + px * shakeOff, tip[1] + py * shakeOff];
-      base = [base[0] + px * shakeOff, base[1] + py * shakeOff];
-    }
-
-    // Hint glow
-    if (a.hint > 0) {
-      ctx.fillStyle = 'rgba(255,214,10,' + (0.45 + 0.35 * Math.sin(now / 110)) + ')';
-      ctx.beginPath();
-      ctx.arc(base[0], base[1], cs * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    const bodyColor = a.chain ? '#7b838f' : a.color;
-
-    // Body: pehle halka dark outline, phir color
-    if (body.length >= 2) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.lineWidth = bw + cs * 0.07;
-      strokePoly(body);
-
-      ctx.strokeStyle = bodyColor;
-      ctx.lineWidth = bw;
-      strokePoly(body);
-
-      if (a.chain) {
-        ctx.strokeStyle = '#e6e9ee';
-        ctx.lineWidth = bw * 0.45;
-        ctx.setLineDash([bw * 0.6, bw * 0.6]);
-        strokePoly(body);
-        ctx.setLineDash([]);
-      }
-    }
-
-    // Head: triangle, seedhi direction mein
-    ctx.fillStyle = bodyColor;
-    ctx.beginPath();
-    ctx.moveTo(tip[0] + vx * cs * 0.05, tip[1] + vy * cs * 0.05);
-    ctx.lineTo(base[0] + px * headHalf, base[1] + py * headHalf);
-    ctx.lineTo(base[0] - px * headHalf, base[1] - py * headHalf);
-    ctx.closePath();
-    ctx.fill();
-  }
-}
-
-// ---- Loop ----
-let lastT = performance.now();
-function frame(now) {
-  const dt = Math.min((now - lastT) / 1000, 0.05);
-  lastT = now;
-  for (let i = 0; i < arrows.length; i++) {
-    const a = arrows[i];
-    if (a.shake > 0) a.shake = Math.max(0, a.shake - dt);
-    if (a.hint > 0) a.hint = Math.max(0, a.hint - dt);
-    if (a.state === 'flying') {
-      a.fly += dt * 1.2;
-      if (a.fly >= 1) { a.fly = 1; a.state = 'gone'; }
-    }
-  }
-  if (state === 'game' || state === 'ending') draw(now);
-  requestAnimationFrame(frame);
-}
-
-// ---- Level select ----
-function buildLevelGrid() {
-  const box = document.getElementById('lvlGrid');
-  box.innerHTML = '';
-  const maxU = getMax();
-  for (let i = 1; i <= MAX_LEVEL_LIST; i++) {
-    const b = document.createElement('button');
-    b.textContent = i;
-    if (i > maxU) b.classList.add('locked');
-    (function (num) {
-      b.addEventListener('click', function () { if (num <= maxU) startLevel(num); });
-    })(i);
-    box.appendChild(b);
-  }
-}
-
-// ---- Buttons ----
-function on(id, fn) {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('click', function () { sfxClick(); fn(); });
-}
-on('bPlay', function () { startLevel(getMax()); });
-on('bLevels', function () { buildLevelGrid(); showScreen('sLevels'); });
-on('bHelp', function () { showScreen('sHelp'); });
-on('bBackL', function () { showScreen('sMenu'); });
-on('bBackH', function () { showScreen('sMenu'); });
-on('bHudMenu', goMenu);
-on('bHint', useHint);
-on('bRestart', function () { startLevel(level); });
-on('bNext', function () { startLevel(level + 1); });
-on('bWinMenu', goMenu);
-on('bRetry', function () { startLevel(level); });
-on('bLoseMenu', goMenu);
-on('bSoundMenu', toggleSound);
-on('bSoundHud', toggleSound);
-window.addEventListener('resize', function () { if (state !== 'menu') layout(); });
-
-document.addEventListener('pointerdown', function () { ensureAudio(); startMusic(); });
-
-goMenu();
-requestAnimationFrame(frame);
-</script>
-</body>
-</html>
+  let rr = head[0] + DIRS[a.d][0], cc =
