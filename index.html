@@ -35,13 +35,12 @@
   canvas { display: block; touch-action: none; border-radius: 18px; }
 
   .screen { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(5,10,25,.35); z-index: 5; padding: 20px; }
-  .screen.show { display: flex; }
   .screen.soft { background: rgba(0,0,0,.3); }
   .card { width: 100%; max-width: 380px; padding: 20px; border-radius: 24px; background: rgba(10,16,34,.66); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 20px 40px rgba(0,0,0,.35); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  .panel { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
   .logo { font-size: 42px; font-weight: 900; letter-spacing: 2px; line-height: 1.05; color: #ffd60a; text-shadow: 0 4px 0 #b07d00, 0 8px 18px rgba(0,0,0,.45); }
   h2 { font-size: 24px; font-weight: 800; text-shadow: 0 3px 8px rgba(0,0,0,.4); }
   p { font-size: 14px; line-height: 1.5; color: #e0eaf8; text-shadow: 0 1px 3px rgba(0,0,0,.4); }
-  .panel { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
   .coinBig { font-size: 20px; font-weight: 900; color: #ffd60a; text-shadow: 0 2px 6px rgba(0,0,0,.4); }
 
   .btn {
@@ -85,7 +84,7 @@
 
   <div id="boardWrap"><canvas id="cv"></canvas></div>
 
-  <div class="screen show" id="sMenu">
+  <div class="screen" id="sMenu" style="display:flex">
     <div class="panel">
       <div class="logo">ARROW<br>ESCAPE</div>
       <div class="coinBig">🪙 <span id="coinMenu">0</span></div>
@@ -209,7 +208,7 @@ function buildThemeGrid() {
 
 // ================= SOUND =================
 let AC = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null;
-let soundOn = true, musicStarted = false, musicTimer = null, nextNoteT = 0, step = 0;
+let soundOn = true, musicStarted = false, nextNoteT = 0, step = 0;
 
 const SCALE = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3];
 const MELODY_IDX = [0, 2, 4, 2, 5, 4, 2, 1, 0, 2, 3, 4, 5, 4, 2, 0];
@@ -261,7 +260,7 @@ function startMusic() {
   if (!AC || musicStarted) return;
   musicStarted = true;
   nextNoteT = AC.currentTime + 0.1;
-  musicTimer = setInterval(musicTick, 120);
+  setInterval(musicTick, 120);
 }
 
 function musicTick() {
@@ -335,13 +334,6 @@ function sfxHint() {
   note(1318.5, t + 0.1, 0.3, 0.18, sfxBus, 'sine');
 }
 
-function sfxCoin() {
-  if (!sfxOK()) return;
-  const t = AC.currentTime;
-  note(1318.5, t, 0.12, 0.2, sfxBus, 'triangle');
-  note(1760, t + 0.08, 0.2, 0.2, sfxBus, 'triangle');
-}
-
 function sfxWin() {
   if (!sfxOK()) return;
   const t = AC.currentTime;
@@ -405,6 +397,14 @@ function rng(seed) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+function shuffle(arr, R) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(R() * (i + 1));
+    const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
 }
 
 function inside(r, c) { return r >= 0 && r < N && c >= 0 && c < N; }
@@ -507,14 +507,13 @@ function pushArrow(path, d, R) {
   for (let i = 0; i < path.length; i++) cellArrow[path[i][0]][path[i][1]] = idx;
 }
 
-// Board ke bache hue khaali cells ko chhote arrows se bharta hai (solvable rehta hai)
+// Bache hue khaali cells ko chhote arrows se bharta hai (har arrow ka rasta saaf rehta hai)
 function fillGaps(R) {
   for (let r = 0; r < N; r++) {
     for (let c = 0; c < N; c++) {
       if (!okFree(r, c)) continue;
       let done = false;
-      const order = [0, 1, 2, 3].sort(function () { return R() - 0.5; });
-      // Pehle 2-cell arrow
+      const order = shuffle([0, 1, 2, 3], R);
       for (let k = 0; k < 4 && !done; k++) {
         const d = order[k];
         const nr = r + DIRS[d][0], nc = c + DIRS[d][1];
@@ -524,7 +523,6 @@ function fillGaps(R) {
         pushArrow([[r, c], [nr, nc]], d, R);
         done = true;
       }
-      // Warna 1-cell arrow
       for (let k = 0; k < 4 && !done; k++) {
         const d = order[k];
         const own = new Set([r * 32 + c]);
@@ -540,13 +538,12 @@ function fillBoard(R, lv) {
   let validCount = 0;
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (valid[r][c]) validCount++;
   const hard = levelHard;
-  const target = validCount;
   let covered = 0;
   const maxLen = Math.min(6 + Math.floor(lv / 3), 22);
   const K = 1 + Math.round(hard * 10);
   let attempts = validCount * 80;
 
-  while (covered < target && attempts-- > 0) {
+  while (covered < validCount && attempts-- > 0) {
     let best = null, bestScore = -1;
     for (let k = 0; k < K; k++) {
       const r = Math.floor(R() * N), c = Math.floor(R() * N);
@@ -559,7 +556,7 @@ function fillBoard(R, lv) {
       const own = new Set(path.map(p => p[0] * 32 + p[1]));
       if (!rayFree(head[0], head[1], hd, own)) continue;
       const sc = hard > 0 ? blockScore(path) : 0;
-      if (sc > bestScore) { bestScore = sc; best = { path, hd }; }
+      if (sc > bestScore) { bestScore = sc; best = { path: path, hd: hd }; }
     }
     if (!best) continue;
     pushArrow(best.path, best.hd, R);
@@ -596,4 +593,470 @@ function genLevel(lv) {
 
 function isBlocked(a, idx) {
   const head = a.cells[a.cells.length - 1];
-  let rr = head[0] + DIRS[a.d][0], cc =
+  let rr = head[0] + DIRS[a.d][0], cc = head[1] + DIRS[a.d][1];
+  while (inside(rr, cc)) {
+    if (valid[rr][cc]) {
+      const v = cellArrow[rr][cc];
+      if (v >= 0 && v !== idx) return true;
+    }
+    rr += DIRS[a.d][0]; cc += DIRS[a.d][1];
+  }
+  return false;
+}
+
+// ================= LAYOUT / ZOOM =================
+function layout() {
+  const avail = Math.min(window.innerWidth - 40, window.innerHeight - 150, 500);
+  size = Math.max(260, avail);
+  dpr = window.devicePixelRatio || 1;
+  cv.style.width = size + 'px';
+  cv.style.height = size + 'px';
+  cv.width = Math.round(size * dpr);
+  cv.height = Math.round(size * dpr);
+  pad = 10;
+  cs = (size - pad * 2) / N;
+  clampPan();
+}
+
+function clampPan() {
+  const lo = size - size * zoom;
+  if (zoom <= 1) { panX = lo / 2; panY = lo / 2; return; }
+  panX = Math.min(0, Math.max(lo, panX));
+  panY = Math.min(0, Math.max(lo, panY));
+}
+
+function cellAt(cx, cy) {
+  const rect = cv.getBoundingClientRect();
+  const x = cx - rect.left, y = cy - rect.top;
+  const bx = (x - panX) / zoom, by = (y - panY) / zoom;
+  return [Math.floor((by - pad) / cs), Math.floor((bx - pad) / cs)];
+}
+
+// ================= SCREENS =================
+// Screens ko seedha style.display se control karte hain (CSS class ki dikkat nahi aati)
+function showScreen(id) {
+  const all = document.querySelectorAll('.screen');
+  for (let i = 0; i < all.length; i++) all[i].style.display = 'none';
+  if (id) document.getElementById(id).style.display = 'flex';
+}
+
+function goMenu() {
+  clearTimeout(endTimer);
+  state = 'menu';
+  boardWrap.style.display = 'none';
+  hud.style.display = 'none';
+  refreshCoinTexts();
+  showScreen('sMenu');
+}
+
+function startLevel(n) {
+  try {
+    ensureAudio();
+    startMusic();
+    clearTimeout(endTimer);
+    level = n;
+    genLevel(n);
+    lives = 3;
+    hints = 3;
+    zoom = 1; panX = 0; panY = 0;
+    pointers.clear();
+    state = 'game';
+    showScreen(null);
+    boardWrap.style.display = 'block';
+    hud.style.display = 'flex';
+    layout();
+    updateHud();
+  } catch (e) {
+    const box = document.getElementById('err');
+    box.style.display = 'block';
+    box.textContent = 'Start error: ' + e.message;
+  }
+}
+
+function updateHud() {
+  const tag = levelHard >= 0.8 ? ' 🔥 Hard' : (levelHard > 0 ? ' · Tricky' : '');
+  document.getElementById('lvlTxt').textContent = 'Level ' + level + tag + '  🪙' + getCoins();
+  document.getElementById('livesTxt').textContent = '❤ ' + lives + '   Arrows left: ' + remaining;
+  document.getElementById('hintCnt').textContent = hints;
+}
+
+function useHint() {
+  if (state !== 'game' || hints <= 0) return;
+  let free = -1;
+  for (let i = 0; i < arrows.length; i++) {
+    if (arrows[i].state === 'live' && !isBlocked(arrows[i], i)) { free = i; break; }
+  }
+  if (free < 0) return;
+  arrows[free].hint = 1.5;
+  hints--;
+  sfxHint();
+  updateHud();
+}
+
+function endLevel(win) {
+  if (state !== 'game') return;
+  state = 'ending';
+  clearTimeout(endTimer);
+  endTimer = setTimeout(function () {
+    if (win) {
+      sfxWin();
+      setMax(Math.max(getMax(), level + 1));
+      setCoins(getCoins() + WIN_COINS);
+      document.getElementById('winTxt').textContent = 'Level ' + level + ' cleared. Level ' + (level + 1) + ' is unlocked.';
+      showScreen('sWin');
+    } else {
+      sfxLose();
+      showLose();
+    }
+  }, 900);
+}
+
+function showLose() {
+  const can = getCoins() >= RESTART_COST;
+  const btn = document.getElementById('bRetry');
+  btn.disabled = !can;
+  document.getElementById('loseMsg').style.display = can ? 'none' : 'block';
+  refreshCoinTexts();
+  showScreen('sLose');
+}
+
+// Restart: coins kaatke, wahi level, wahi board
+function paidRestart() {
+  if (getCoins() < RESTART_COST) { showLose(); return; }
+  setCoins(getCoins() - RESTART_COST);
+  startLevel(level);
+}
+
+function buzz() {
+  if (navigator.vibrate) navigator.vibrate(120);
+}
+
+// ================= INPUT (tap, pinch zoom, drag) =================
+function pinchInfo() {
+  const v = [...pointers.values()];
+  const a = v[0], b = v[1];
+  return { dist: Math.hypot(b.x - a.x, b.y - a.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+}
+
+cv.addEventListener('pointerdown', function (e) {
+  if (state !== 'game') return;
+  ensureAudio();
+  startMusic();
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) {
+    gMulti = false; gMoved = false;
+    gStart = { x: e.clientX, y: e.clientY };
+  }
+  if (pointers.size === 2) {
+    gMulti = true;
+    pinchPrev = pinchInfo();
+  }
+});
+
+cv.addEventListener('pointermove', function (e) {
+  if (!pointers.has(e.pointerId)) return;
+  const prev = pointers.get(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (pointers.size === 1) {
+    if (gStart && Math.hypot(e.clientX - gStart.x, e.clientY - gStart.y) > 10) gMoved = true;
+    if (gMoved && zoom > 1) {
+      panX += e.clientX - prev.x;
+      panY += e.clientY - prev.y;
+      clampPan();
+    }
+  } else if (pointers.size === 2 && pinchPrev) {
+    const cur = pinchInfo();
+    const rect = cv.getBoundingClientRect();
+    const bx = (pinchPrev.mx - rect.left - panX) / zoom;
+    const by = (pinchPrev.my - rect.top - panY) / zoom;
+    zoom = Math.min(3, Math.max(0.6, zoom * cur.dist / pinchPrev.dist));
+    panX = (cur.mx - rect.left) - bx * zoom;
+    panY = (cur.my - rect.top) - by * zoom;
+    clampPan();
+    pinchPrev = cur;
+  }
+});
+
+function endPointer(e) {
+  if (!pointers.has(e.pointerId)) return;
+  const wasSingle = pointers.size === 1;
+  pointers.delete(e.pointerId);
+  if (wasSingle && !gMulti && !gMoved && e.type === 'pointerup' && state === 'game') {
+    handleTap(e.clientX, e.clientY);
+  }
+  if (pointers.size === 0) {
+    gMulti = false; gMoved = false; pinchPrev = null;
+  } else if (pointers.size === 1) {
+    const q = [...pointers.values()][0];
+    gStart = { x: q.x, y: q.y };
+    gMoved = true;
+    pinchPrev = null;
+  }
+}
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+
+function handleTap(cx, cy) {
+  const rc = cellAt(cx, cy);
+  const r = rc[0], c = rc[1];
+  if (!inside(r, c)) return;
+  const idx = cellArrow[r][c];
+  if (idx < 0) return;
+  const a = arrows[idx];
+  if (!a || a.state !== 'live') return;
+
+  if (isBlocked(a, idx)) {
+    lives--;
+    a.shake = 0.4;
+    buzz();
+    sfxWrong();
+    updateHud();
+    if (lives <= 0) endLevel(false);
+  } else {
+    a.state = 'flying';
+    a.fly = 0;
+    a.hint = 0;
+    for (let i = 0; i < a.cells.length; i++) cellArrow[a.cells[i][0]][a.cells[i][1]] = -1;
+    remaining--;
+    sfxWhoosh();
+    updateHud();
+    if (remaining === 0) endLevel(true);
+  }
+}
+
+// ================= DRAWING =================
+function pathLength(P) {
+  let L = 0;
+  for (let i = 0; i < P.length - 1; i++) L += Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]);
+  return L;
+}
+
+function subPath(P, s0, s1) {
+  const out = [];
+  let acc = 0;
+  for (let i = 0; i < P.length - 1; i++) {
+    const A = P[i], B = P[i + 1];
+    const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    if (len === 0) continue;
+    const a0 = acc, a1 = acc + len;
+    if (a1 >= s0 && a0 <= s1) {
+      const t0 = Math.max(0, (s0 - a0) / len);
+      const t1 = Math.min(1, (s1 - a0) / len);
+      const p0 = [A[0] + (B[0] - A[0]) * t0, A[1] + (B[1] - A[1]) * t0];
+      const p1 = [A[0] + (B[0] - A[0]) * t1, A[1] + (B[1] - A[1]) * t1];
+      if (out.length === 0) out.push(p0);
+      out.push(p1);
+    }
+    acc = a1;
+  }
+  return out;
+}
+
+function pointAt(P, d0) {
+  let acc = 0;
+  for (let i = 0; i < P.length - 1; i++) {
+    const A = P[i], B = P[i + 1];
+    const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    if (acc + len >= d0) {
+      const t = len ? (d0 - acc) / len : 0;
+      return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t];
+    }
+    acc += len;
+  }
+  return P[P.length - 1];
+}
+
+function strokePoly(pts) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+}
+
+function roundRectPath(x, y, w, h, rad) {
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.lineTo(x + w - rad, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+  ctx.lineTo(x + w, y + h - rad);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+  ctx.lineTo(x + rad, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+  ctx.lineTo(x, y + rad);
+  ctx.quadraticCurveTo(x, y, x + rad, y);
+  ctx.closePath();
+}
+
+function draw(now) {
+  const T = THEMES[themeIdx];
+  const thin = level >= THIN_FROM;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, dpr * panX, dpr * panY);
+
+  roundRectPath(0, 0, size, size, 18);
+  ctx.fillStyle = T.board;
+  ctx.fill();
+
+  ctx.save();
+  roundRectPath(0, 0, size, size, 18);
+  ctx.clip();
+
+  ctx.fillStyle = T.dot;
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (!valid[r][c]) continue;
+      ctx.beginPath();
+      ctx.arc(pad + (c + 0.5) * cs, pad + (r + 0.5) * cs, Math.max(1.5, cs * 0.035), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let i = 0; i < arrows.length; i++) {
+    const a = arrows[i];
+    if (a.state === 'gone') continue;
+
+    const vx = DIRS[a.d][1], vy = DIRS[a.d][0];
+    const px = -vy, py = vx;
+
+    const pts = a.cells.map(p => [pad + (p[1] + 0.5) * cs, pad + (p[0] + 0.5) * cs]);
+    const L0 = pathLength(pts);
+    const head = pts[pts.length - 1];
+
+    const extCount = 2 * N + Math.ceil(L0 / cs) + 3;
+    const P = pts.slice();
+    for (let k = 1; k <= extCount; k++) P.push([head[0] + vx * cs * k, head[1] + vy * cs * k]);
+
+    const s = a.state === 'flying' ? a.fly * (L0 + N * cs + cs) : 0;
+    const tipArc = L0 + cs * 0.3;
+
+    let bw, headLen, headHalf;
+    if (thin) {
+      bw = Math.max(6, cs * 0.22);
+      headHalf = Math.max(bw * 1.7, cs * 0.3);
+      headLen = Math.max(bw * 2.2, cs * 0.45);
+    } else {
+      bw = cs * 0.4;
+      headHalf = cs * 0.34;
+      headLen = cs * 0.5;
+    }
+
+    const shakeOff = a.shake > 0 ? Math.sin(a.shake * 70) * cs * 0.15 : 0;
+
+    let body = subPath(P, s, tipArc + s - headLen);
+    let tip = pointAt(P, tipArc + s);
+    let base = pointAt(P, tipArc + s - headLen);
+
+    if (shakeOff !== 0) {
+      body = body.map(q => [q[0] + px * shakeOff, q[1] + py * shakeOff]);
+      tip = [tip[0] + px * shakeOff, tip[1] + py * shakeOff];
+      base = [base[0] + px * shakeOff, base[1] + py * shakeOff];
+    }
+
+    if (a.hint > 0) {
+      ctx.fillStyle = 'rgba(255,214,10,' + (0.45 + 0.35 * Math.sin(now / 110)) + ')';
+      ctx.beginPath();
+      ctx.arc(base[0], base[1], cs * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const bodyColor = T.mono ? T.monoColor : a.color;
+
+    if (body.length >= 2) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+      ctx.lineWidth = bw + Math.max(2, cs * 0.07);
+      strokePoly(body);
+
+      ctx.strokeStyle = bodyColor;
+      ctx.lineWidth = bw;
+      strokePoly(body);
+    }
+
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.moveTo(tip[0] + vx * cs * 0.05, tip[1] + vy * cs * 0.05);
+    ctx.lineTo(base[0] + px * headHalf, base[1] + py * headHalf);
+    ctx.lineTo(base[0] - px * headHalf, base[1] - py * headHalf);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// ================= LOOP =================
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+  for (let i = 0; i < arrows.length; i++) {
+    const a = arrows[i];
+    if (a.shake > 0) a.shake = Math.max(0, a.shake - dt);
+    if (a.hint > 0) a.hint = Math.max(0, a.hint - dt);
+    if (a.state === 'flying') {
+      a.fly += dt * 1.2;
+      if (a.fly >= 1) { a.fly = 1; a.state = 'gone'; }
+    }
+  }
+  if (state === 'game' || state === 'ending') draw(now);
+  requestAnimationFrame(frame);
+}
+
+// ================= LEVEL SELECT =================
+function buildLevelGrid() {
+  const box = document.getElementById('lvlGrid');
+  box.innerHTML = '';
+  const maxU = getMax();
+  for (let i = 1; i <= MAX_LEVEL_LIST; i++) {
+    const b = document.createElement('button');
+    b.textContent = i <= maxU ? i : '🔒';
+    if (i > maxU) b.classList.add('locked');
+    (function (num) {
+      b.addEventListener('click', function () { if (num <= maxU) startLevel(num); });
+    })(i);
+    box.appendChild(b);
+  }
+}
+
+// ================= BUTTONS =================
+function on(id, fn) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function () { sfxClick(); fn(); });
+}
+on('bPlay', function () { startLevel(getMax()); });
+on('bLevels', function () { buildLevelGrid(); showScreen('sLevels'); });
+on('bHelp', function () { showScreen('sHelp'); });
+on('bBackL', function () { showScreen('sMenu'); });
+on('bBackH', function () { showScreen('sMenu'); });
+on('bMenuPaint', function () { buildThemeGrid(); showScreen('sPaint'); });
+on('bPaint', function () { buildThemeGrid(); showScreen('sPaint'); });
+on('bBackP', function () { showScreen(state === 'game' ? null : 'sMenu'); });
+on('bHudMenu', goMenu);
+on('bHint', useHint);
+on('bRestart', function () { startLevel(level); });
+on('bNext', function () { startLevel(level + 1); });
+on('bWinMenu', goMenu);
+on('bRetry', paidRestart);
+on('bLoseMenu', goMenu);
+on('bSoundMenu', toggleSound);
+on('bSoundHud', toggleSound);
+window.addEventListener('resize', function () { if (state !== 'menu') layout(); });
+
+document.addEventListener('pointerdown', function () { ensureAudio(); startMusic(); });
+
+applyTheme();
+updateSoundBtns();
+goMenu();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
